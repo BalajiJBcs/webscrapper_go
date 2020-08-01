@@ -1,14 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gofiber/fiber"
+	"github.com/parnurzeal/gorequest"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"net/http"
-	"context"
 	"time"
 )
 
@@ -17,11 +18,6 @@ const collectionName = "product"
 const port = 8000
 
 func postProduct(c *fiber.Ctx) {
-	collection, err := getMongoDbCollection(dbName, collectionName)
-	if err != nil {
-		c.Status(500).Send(err)
-		return
-	}
 	var product Product
 
 	json.Unmarshal([]byte(c.Body()), &product)
@@ -66,13 +62,32 @@ func postProduct(c *fiber.Ctx) {
 		CreatedAt : time.Now(),
 		UpdatedAt : time.Now(),
 	}
-	res, err := collection.InsertOne(context.Background(), productFinal)
+	request := gorequest.New()
+	resp, body, errs := request.Post("http://localhost:8000/productInsert").
+		Send(productFinal).
+		End()
+	if errs != nil {
+		log.Fatal(err)
+	}
+	c.Send(body)
+}
+
+func insertProduct(c *fiber.Ctx) {
+	collection, err := getMongoDbCollection(dbName, collectionName)
+	if err != nil {
+		c.Status(500).Send(err)
+		return
+	}
+	var products ProductInfo
+	json.Unmarshal([]byte(c.Body()), &products)
+	res, err := collection.InsertOne(context.Background(), products)
 	if err != nil {
 		c.Status(500).Send(err)
 		return
 	}
 	response, _ := json.Marshal(res)
 	c.Send(response)
+
 }
 
 func getProduct(c *fiber.Ctx) {
@@ -113,6 +128,7 @@ func getProduct(c *fiber.Ctx) {
 func main() {
 	app := fiber.New()
 	app.Post("/product/", postProduct)
+	app.Post("/productInsert", insertProduct)
 	app.Get("/product/:id?", getProduct)
 	app.Listen(port)
 }
