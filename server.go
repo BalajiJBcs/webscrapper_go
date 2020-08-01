@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"webscrapper_in_go/model"
 )
 
 const dbName = "productdb"
@@ -18,7 +19,7 @@ const collectionName = "product"
 const port = 8000
 
 func postProduct(c *fiber.Ctx) {
-	var product Product
+	var product model.Product
 
 	json.Unmarshal([]byte(c.Body()), &product)
 	client := &http.Client{}
@@ -53,7 +54,7 @@ func postProduct(c *fiber.Ctx) {
 	review = doc.Find("#acrCustomerReviewText").Text()
 	image, _ := doc.Find("#landingImage").Attr("data-old-hires")
 
-	productFinal := ProductInfo{
+	productFinal := model.ProductInfo{
 		Name: name,
 		Description: description,
 		Price: price,
@@ -73,12 +74,12 @@ func postProduct(c *fiber.Ctx) {
 }
 
 func insertProduct(c *fiber.Ctx) {
-	collection, err := getMongoDbCollection(dbName, collectionName)
+	collection, err := model.GetMongoDbCollection(dbName, collectionName)
 	if err != nil {
 		c.Status(500).Send(err)
 		return
 	}
-	var products ProductInfo
+	var products model.ProductInfo
 	json.Unmarshal([]byte(c.Body()), &products)
 	res, err := collection.InsertOne(context.Background(), products)
 	if err != nil {
@@ -91,7 +92,7 @@ func insertProduct(c *fiber.Ctx) {
 }
 
 func getProduct(c *fiber.Ctx) {
-	collection, err := getMongoDbCollection(dbName, collectionName)
+	collection, err := model.GetMongoDbCollection(dbName, collectionName)
 	if err != nil {
 		c.Status(500).Send(err)
 		return

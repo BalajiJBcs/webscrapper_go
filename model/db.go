@@ -1,7 +1,7 @@
-package main
+package model
 
 import (
-"context"
+	"context"
 "log"
 
 "go.mongodb.org/mongo-driver/mongo"
@@ -26,7 +26,7 @@ func GetMongoDbConnection() (*mongo.Client, error) {
 	return client, nil
 }
 
-func getMongoDbCollection(DbName string, CollectionName string) (*mongo.Collection, error) {
+func GetMongoDbCollection(DbName string, CollectionName string) (*mongo.Collection, error) {
 	client, err := GetMongoDbConnection()
 
 	if err != nil {
