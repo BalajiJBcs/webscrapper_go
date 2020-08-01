@@ -6,12 +6,24 @@ import (
 	"github.com/gofiber/fiber"
 	"log"
 	"net/http"
+	"context"
 )
 
+const dbName = "productdb"
+const collectionName = "product"
 const port = 8000
 
 func getProduct(c *fiber.Ctx) {
+	// db connectivit
+	collection, err := getMongoDbCollection(dbName, collectionName)
+	if err != nil {
+		c.Status(500).Send(err)
+		return
+	}
+	// db connectivity ends
 	var product Product
+	//var productInfo ProductInfo
+
 	json.Unmarshal([]byte(c.Body()), &product)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", product.WebUrl, nil)
@@ -34,7 +46,6 @@ func getProduct(c *fiber.Ctx) {
 	// Load the HTML document
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 
-	log.Println(doc)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,7 +55,36 @@ func getProduct(c *fiber.Ctx) {
 	log.Println(doc.Find("#priceblock_ourprice").Text())
 	log.Println(doc.Find("#acrCustomerReviewText").Text())
 	log.Println(doc.Find("#landingImage").Attr("data-old-hires"))
+	//response, _ := json.Marshal("hello")
+
+	var price string
+	var review string
+
+	name, _ := doc.Find("meta[name='title']").Attr("content")
+	description, _ := doc.Find("meta[name='description']").Attr("content")
+	price = doc.Find("#priceblock_ourprice").Text()
+	review = doc.Find("#acrCustomerReviewText").Text()
+	image, _ := doc.Find("#landingImage").Attr("data-old-hires")
+
+	productFinal := ProductInfo{
+		Name: name,
+		Description: description,
+		Price: price,
+		Image: image,
+		TotalReview: review,
+	}
+
+	res, err := collection.InsertOne(context.Background(), productFinal)
+	if err != nil {
+		c.Status(500).Send(err)
+		return
+	}
+
+	response, _ := json.Marshal(res)
+	c.Send(response)
+
 }
+
 
 func main() {
 	app := fiber.New()
